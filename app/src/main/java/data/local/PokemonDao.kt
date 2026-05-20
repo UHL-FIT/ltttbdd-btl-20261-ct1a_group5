@@ -1,35 +1,25 @@
 package com.example.pokedex.data.local
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Delete
 import kotlinx.coroutines.flow.Flow
 
-// Bảng lưu Dream Team
-@Entity(tableName = "dream_team")
-data class PokemonEntity(
-    @PrimaryKey val id: Int,
-    val name: String,
-    val imageUrl: String,
-    val mainType: String
-)
-
-// Các lệnh thao tác với Database
 @Dao
 interface PokemonDao {
-    @Query("SELECT * FROM dream_team")
-    fun getDreamTeam(): Flow<List<PokemonEntity>>
 
+    // ĐỔI TÊN và BỎ "suspend" để trị dứt điểm lỗi KSP
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertToTeam(pokemon: PokemonEntity)
+    fun savePokemonMark(state: PokemonStateEntity)
 
-    @Delete
-    suspend fun removeFromTeam(pokemon: PokemonEntity)
+    @Query("SELECT id FROM pokemon_state WHERE isFavorite = 1")
+    fun getFavoriteIds(): Flow<List<Int>>
 
-    @Query("SELECT COUNT(*) FROM dream_team")
-    suspend fun getTeamCount(): Int
+    @Query("SELECT id FROM pokemon_state WHERE isCaught = 1")
+    fun getCaughtIds(): Flow<List<Int>>
+
+    // ĐỔI TÊN và BỎ "suspend"
+    @Query("SELECT * FROM pokemon_state WHERE id = :id")
+    fun checkPokemonMark(id: Int): PokemonStateEntity?
 }

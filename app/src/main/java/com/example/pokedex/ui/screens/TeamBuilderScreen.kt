@@ -17,10 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel // Thêm import ViewModel
-import coil.compose.AsyncImage // Thêm import Coil để tải ảnh
+import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.pokedex.viewmodel.PokemonUiState
 import com.example.pokedex.viewmodel.PokemonViewModel
 
@@ -28,32 +29,21 @@ import com.example.pokedex.viewmodel.PokemonViewModel
 @Composable
 fun TeamBuilderScreen(
     onOpenMenu: () -> Unit,
-    // CẮM "BỘ NÃO" VÀO ĐÂY:
     viewModel: PokemonViewModel = viewModel()
 ) {
-    // Trạng thái kiểm tra xem đang ở màn hình Chỉnh sửa hay Chọn Pokemon
     var isSelectingPokemon by remember { mutableStateOf(false) }
-
-    // Trạng thái dữ liệu đội hình
     var teamName by remember { mutableStateOf("") }
     var selectedTeam by remember { mutableStateOf(listOf<PokemonUiModel>()) }
-
-    // Trạng thái thanh tìm kiếm
     var searchQuery by remember { mutableStateOf("") }
 
-    // 1. LẤY DỮ LIỆU THẬT TỪ VIEWMODEL
     val uiState = viewModel.uiState
     val allPokemon = if (uiState is PokemonUiState.Success) uiState.pokemonList else emptyList()
 
-    // 2. LOGIC TÌM KIẾM (Lọc danh sách theo tên hoặc ID)
     val filteredPokemon = allPokemon.filter {
         it.name.contains(searchQuery, ignoreCase = true) || it.id.toString() == searchQuery
     }
 
     if (isSelectingPokemon) {
-        // ==========================================
-        // MÀN HÌNH 2: CHỌN POKÉMON (Đã có data thật)
-        // ==========================================
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -67,7 +57,6 @@ fun TeamBuilderScreen(
             }
         ) { padding ->
             Column(modifier = Modifier.padding(padding).fillMaxSize()) {
-                // Thanh tìm kiếm (Đã hoạt động thật)
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -77,36 +66,32 @@ fun TeamBuilderScreen(
                     shape = RoundedCornerShape(12.dp)
                 )
 
-                // Danh sách Pokemon để chọn
                 LazyColumn {
                     items(filteredPokemon) { pokemon ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    // Thêm vào đội hình nếu chưa đủ 6 con và chưa có con này
                                     if (selectedTeam.size < 6 && !selectedTeam.contains(pokemon)) {
                                         selectedTeam = selectedTeam + pokemon
                                     }
                                     isSelectingPokemon = false
-                                    searchQuery = "" // Reset tìm kiếm khi chọn xong
+                                    searchQuery = ""
                                 }
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // ẢNH THẬT TỪ MẠNG
                             AsyncImage(
                                 model = pokemon.imageUrl,
                                 contentDescription = pokemon.name,
                                 modifier = Modifier
                                     .size(60.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFF0F0F0)) // Nền xám nhạt cho ảnh
+                                    .background(Color(0xFFF0F0F0))
                             )
 
                             Spacer(modifier = Modifier.width(16.dp))
 
-                            // Thông tin
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(text = "#${pokemon.id.toString().padStart(3, '0')}   ${pokemon.name}", fontSize = 18.sp, fontWeight = FontWeight.Medium)
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -123,10 +108,9 @@ fun TeamBuilderScreen(
                                 }
                             }
 
-                            // Icons bên phải
                             Icon(Icons.Default.FavoriteBorder, contentDescription = "Fav", tint = Color.Gray)
                             Spacer(modifier = Modifier.width(16.dp))
-                            // Hiển thị nút check xanh nếu đã có trong đội hình
+
                             if (selectedTeam.contains(pokemon)) {
                                 Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = Color.Green)
                             } else {
@@ -139,9 +123,6 @@ fun TeamBuilderScreen(
             }
         }
     } else {
-        // ==========================================
-        // MÀN HÌNH 1: TEAM EDITOR CHÍNH
-        // ==========================================
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -163,7 +144,6 @@ fun TeamBuilderScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Nhập tên đội
                 Text("TEAM NAME", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 OutlinedTextField(
                     value = teamName,
@@ -175,7 +155,6 @@ fun TeamBuilderScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Thanh công cụ POKEMON PARTY
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -183,11 +162,22 @@ fun TeamBuilderScreen(
                 ) {
                     Text("POKÉMON PARTY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                     Row {
-                        Button(onClick = { /* Xóa Pokemon (Sẽ code sau) */ }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.height(32.dp)) {
+                        // Nút CLEAR để xóa nhanh cả đội hình
+                        Button(
+                            onClick = { selectedTeam = emptyList() },
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                            modifier = Modifier.height(32.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray, contentColor = Color.Black)
+                        ) {
                             Text("CLEAR", fontSize = 12.sp)
                         }
                         Spacer(modifier = Modifier.width(8.dp))
-                        Button(onClick = { isSelectingPokemon = true }, contentPadding = PaddingValues(horizontal = 12.dp), modifier = Modifier.height(32.dp)) {
+                        Button(
+                            onClick = { isSelectingPokemon = true },
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                            modifier = Modifier.height(32.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334F6A))
+                        ) {
                             Text("ADD", fontSize = 12.sp)
                         }
                     }
@@ -195,18 +185,15 @@ fun TeamBuilderScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Khung hiển thị các Pokemon đã chọn
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0)).padding(16.dp).defaultMinSize(minHeight = 120.dp)
                 ) {
                     if (selectedTeam.isEmpty()) {
                         Text("No Pokémon added yet. Click ADD.", color = Color.Gray, modifier = Modifier.align(Alignment.Center))
                     } else {
-                        // Hiển thị danh sách Pokemon ĐÃ CHỌN (có Ảnh thật)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             selectedTeam.forEach { pokemon ->
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
-                                    // ẢNH THẬT
                                     AsyncImage(
                                         model = pokemon.imageUrl,
                                         contentDescription = pokemon.name,
@@ -222,7 +209,9 @@ fun TeamBuilderScreen(
                 if (selectedTeam.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // --- TEAM STATS (Dữ liệu giả lập - Chờ chọc API Stats) ---
+                    // =======================================================
+                    // --- TEAM STATS (ĐÃ ĐƯỢC TÍNH TOÁN THÔNG MINH LÊN UI) ---
+                    // =======================================================
                     Text("Team Stats", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0)).padding(16.dp)) {
@@ -234,18 +223,35 @@ fun TeamBuilderScreen(
                                 Text("Min", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
                                 Text("Max", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
                             }
-                            StatRow("HP", 85, Color.Red, 300, 394)
-                            StatRow("Attack", 103, Color.Yellow, 215, 366)
-                            StatRow("Defense", 99, Color.Green, 335, 513)
-                            StatRow("Sp. Attack", 76, Color.DarkGray, 83, 205)
-                            StatRow("Sp. Defense", 87, Color(0xFFD2691E), 87, 210)
-                            StatRow("Speed", 70, Color.Blue, 54, 170)
+
+                            // Tính chỉ số trung bình (đảm bảo không crash nếu chưa có đủ thuộc tính)
+                            val avgHp = selectedTeam.map { it.hp }.average().toInt()
+                            val avgAtk = selectedTeam.map { it.attack }.average().toInt()
+                            val avgDef = selectedTeam.map { it.defense }.average().toInt()
+                            val avgSpAtk = selectedTeam.map { it.spAttack }.average().toInt()
+                            val avgSpDef = selectedTeam.map { it.spDefense }.average().toInt()
+                            val avgSpd = selectedTeam.map { it.speed }.average().toInt()
+                            val totalStats = avgHp + avgAtk + avgDef + avgSpAtk + avgSpDef + avgSpd
+
+                            StatRow("HP", avgHp, Color(0xFFFF5959), calcMinHp(avgHp), calcMaxHp(avgHp))
+                            StatRow("Attack", avgAtk, Color(0xFFF5AC78), calcMinStat(avgAtk), calcMaxStat(avgAtk))
+                            StatRow("Defense", avgDef, Color(0xFFFAE078), calcMinStat(avgDef), calcMaxStat(avgDef))
+                            StatRow("Sp. Attack", avgSpAtk, Color(0xFF9DB7F5), calcMinStat(avgSpAtk), calcMaxStat(avgSpAtk))
+                            StatRow("Sp. Defense", avgSpDef, Color(0xFFA7DB8D), calcMinStat(avgSpDef), calcMaxStat(avgSpDef))
+                            StatRow("Speed", avgSpd, Color(0xFFFA92B2), calcMinStat(avgSpd), calcMaxStat(avgSpd))
+
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text("Total   $totalStats", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("The ranges shown on the right are for a level 100 Pokémon. Max values are based on a beneficial nature, 252 EVs, 31 IVs; Min values are based on a hindering nature, 0 EVs, 0 IVs.",
+                                fontSize = 9.sp, color = Color.Gray, textAlign = TextAlign.Center)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // --- TYPE EFFECTIVENESS (Dữ liệu giả lập - Chờ chọc API) ---
+                    // --- TYPE EFFECTIVENESS (Chưa làm logic phần này) ---
                     Text("Type Effectiveness", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(8.dp))
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -305,3 +311,11 @@ fun EffectivenessChip(typeName: String, multiplier: String, bgColor: Color, badg
         Text(multiplier, color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(badgeColor).padding(horizontal = 8.dp, vertical = 6.dp))
     }
 }
+
+// --- CÔNG THỨC LEVEL 100 CHUẨN CỦA POKÉMON ---
+fun calcMinHp(base: Int) = base * 2 + 110
+fun calcMaxHp(base: Int) = base * 2 + 204
+
+// Chỉ số khác bị ảnh hưởng bởi Nature (Tăng 10% hoặc giảm 10%)
+fun calcMinStat(base: Int) = ((base * 2 + 5) * 0.9).toInt()
+fun calcMaxStat(base: Int) = ((base * 2 + 99) * 1.1).toInt()

@@ -6,10 +6,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import com.example.pokedex.ui.components.AppDrawer
 import com.example.pokedex.ui.screens.HomeScreen
-import com.example.pokedex.ui.screens.TeamBuilderScreen // Đã thêm Import màn hình TeamBuilder
+import com.example.pokedex.ui.screens.TeamBuilderScreen
+import com.example.pokedex.ui.screens.PokemonDetailScreen
+import com.example.pokedex.ui.screens.ItemDexScreen
+// --- 1. IMPORT MÀN HÌNH LOCATION DEX ---
+import com.example.pokedex.ui.screens.LocationDexScreen
+import com.example.pokedex.viewmodel.PokemonViewModel
 import com.example.pokedex.ui.theme.PokeDexTheme
 
 class MainActivity : ComponentActivity() {
@@ -22,31 +28,70 @@ class MainActivity : ComponentActivity() {
                 val scope = rememberCoroutineScope()
                 var currentRoute by remember { mutableStateOf("pokedex") }
 
+                var selectedPokemonId by remember { mutableStateOf<Int?>(null) }
+
+                val pokemonViewModel: PokemonViewModel = viewModel()
+
                 ModalNavigationDrawer(
                     drawerState = drawerState,
                     drawerContent = {
                         AppDrawer(
                             currentRoute = currentRoute,
                             closeDrawer = { scope.launch { drawerState.close() } },
-                            onNavigate = { route -> currentRoute = route }
+                            onNavigate = { route ->
+                                currentRoute = route
+                                selectedPokemonId = null
+                            }
                         )
                     }
                 ) {
-
-                    when (currentRoute) {
-                        "pokedex" -> {
-                            HomeScreen(onOpenMenu = { scope.launch { drawerState.open() } })
-                        }
-                        "team" -> {
-                            // Gọi màn hình Team Builder khi bấm vào menu
-                            TeamBuilderScreen(onOpenMenu = { scope.launch { drawerState.open() } })
-                        }
-                        else -> {
-                            // Màn hình mặc định dự phòng
-                            HomeScreen(onOpenMenu = { scope.launch { drawerState.open() } })
+                    if (selectedPokemonId != null) {
+                        PokemonDetailScreen(
+                            pokemonId = selectedPokemonId!!,
+                            onBack = { selectedPokemonId = null },
+                            onNavigateToPokemon = { nextId -> selectedPokemonId = nextId },
+                            onNavigateHome = {
+                                selectedPokemonId = null
+                                currentRoute = "pokedex" // Force về trang chủ cho an toàn
+                            },
+                            viewModel = pokemonViewModel
+                        )
+                    } else {
+                        // --- 2. ĐIỀU HƯỚNG THÔNG MINH ---
+                        when (currentRoute) {
+                            "pokedex" -> {
+                                HomeScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } },
+                                    onPokemonClick = { id -> selectedPokemonId = id },
+                                    viewModel = pokemonViewModel
+                                )
+                            }
+                            "team" -> {
+                                TeamBuilderScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } },
+                                    viewModel = pokemonViewModel
+                                )
+                            }
+                            "items" -> {
+                                ItemDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                            }
+                            // --- BỔ SUNG ROUTE "locations" ĐỂ MỞ LOCATION DEX ---
+                            "locations" -> {
+                                LocationDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                            }
+                            else -> {
+                                HomeScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } },
+                                    onPokemonClick = { id -> selectedPokemonId = id },
+                                    viewModel = pokemonViewModel
+                                )
+                            }
                         }
                     }
-                    // ==========================================
                 }
             }
         }
