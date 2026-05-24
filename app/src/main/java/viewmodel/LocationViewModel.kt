@@ -6,133 +6,118 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import kotlin.random.Random
 
-// --- DATA MODELS ---
 data class LocationUiModel(val id: Int, val name: String, val region: String, val pokemonCount: Int)
 
 data class EncounterUiModel(
-    val pokemonName: String,
-    val imageUrl: String,
-    val levelRange: String,
-    val rate: String,
-    val rateColor: Long, // Xanh lá (Dễ gặp), Vàng (Trung bình), Đỏ (Khó gặp)
-    val versions: List<String>
+    val pokemonName: String, val imageUrl: String, val levelRange: String,
+    val rate: String, val typeColor: Long, val versions: List<String>
 )
 
 data class EncounterGroup(
-    val methodTitle: String,
-    val methodDescription: String,
-    val icon: String? = null,
-    val encounters: List<EncounterUiModel>
+    val methodTitle: String, val methodDescription: String,
+    val icon: String? = null, val encounters: List<EncounterUiModel>
 )
 
 class LocationViewModel : ViewModel() {
 
+    // --- BIẾN TRẠNG THÁI CHO GAME VERSION ---
     var selectedVersion by mutableStateOf("Scarlet")
         private set
 
     fun setVersion(version: String) { selectedVersion = version }
 
-    // --- DANH SÁCH BIOME CỐ ĐỊNH ---
-    val locationList = listOf(
+    // Logic thông minh: Suy ra vùng đất dựa trên phiên bản Game
+    fun getRegionForVersion(version: String): String {
+        return when (version) {
+            "Red", "Blue", "Yellow", "FireRed", "LeafGreen", "Let's Go Pikachu", "Let's Go Eevee" -> "Kanto"
+            "Gold", "Silver", "Crystal", "HeartGold", "SoulSilver" -> "Johto"
+            "Ruby", "Sapphire", "Emerald", "Omega Ruby", "Alpha Sapphire" -> "Hoenn"
+            "Diamond", "Pearl", "Platinum", "Brilliant Diamond", "Shining Pearl", "Legends: Arceus" -> "Sinnoh"
+            "Black", "White", "Black 2", "White 2" -> "Unova"
+            "X", "Y" -> "Kalos"
+            "Sun", "Moon", "Ultra Sun", "Ultra Moon" -> "Alola"
+            "Sword", "Shield" -> "Galar"
+            "Scarlet", "Violet" -> "Paldea"
+            else -> "Paldea" // Mặc định
+        }
+    }
+
+    // --- DANH SÁCH ĐỊA ĐIỂM (TỪ KANTO ĐẾN PALDEA) ---
+    val allLocations = listOf(
+        // Kanto
+        LocationUiModel(101, "Pallet Town", "Kanto", Random.nextInt(5, 10)),
+        LocationUiModel(102, "Viridian Forest", "Kanto", Random.nextInt(15, 30)),
+        LocationUiModel(103, "Mt. Moon", "Kanto", Random.nextInt(20, 45)),
+
+        // Johto
+        LocationUiModel(201, "Route 29", "Johto", Random.nextInt(10, 20)),
+        LocationUiModel(202, "Ilex Forest", "Johto", Random.nextInt(15, 30)),
+        LocationUiModel(203, "Lake of Rage", "Johto", Random.nextInt(25, 50)),
+
+        // Hoenn
+        LocationUiModel(301, "Petalburg Woods", "Hoenn", Random.nextInt(10, 25)),
+        LocationUiModel(302, "Mt. Chimney", "Hoenn", Random.nextInt(20, 40)),
+        LocationUiModel(303, "Shoal Cave", "Hoenn", Random.nextInt(15, 35)),
+
+        // Sinnoh
+        LocationUiModel(401, "Mt. Coronet", "Sinnoh", Random.nextInt(40, 80)),
+        LocationUiModel(402, "Great Marsh", "Sinnoh", Random.nextInt(20, 45)),
+
+        // Unova
+        LocationUiModel(501, "Pinwheel Forest", "Unova", Random.nextInt(20, 40)),
+        LocationUiModel(502, "Desert Resort", "Unova", Random.nextInt(25, 50)),
+
+        // Kalos
+        LocationUiModel(601, "Santalune Forest", "Kalos", Random.nextInt(15, 35)),
+        LocationUiModel(602, "Terminus Cave", "Kalos", Random.nextInt(30, 60)),
+
+        // Alola
+        LocationUiModel(701, "Melemele Meadow", "Alola", Random.nextInt(15, 30)),
+        LocationUiModel(702, "Mount Lanakila", "Alola", Random.nextInt(30, 55)),
+
+        // Galar
+        LocationUiModel(801, "Slumbering Weald", "Galar", Random.nextInt(10, 25)),
+        LocationUiModel(802, "Wild Area", "Galar", Random.nextInt(60, 120)),
+
+        // Paldea
         LocationUiModel(1, "Bamboo", "Paldea", Random.nextInt(15, 40)),
         LocationUiModel(2, "Beach", "Paldea", Random.nextInt(20, 50)),
-        LocationUiModel(3, "Canyon", "Blueberry Academy", Random.nextInt(50, 90)),
+        LocationUiModel(3, "Canyon", "Paldea", Random.nextInt(50, 90)),
         LocationUiModel(4, "Cave", "Paldea", Random.nextInt(30, 60)),
-        LocationUiModel(5, "Coastal", "Blueberry Academy", Random.nextInt(60, 100)),
-        LocationUiModel(6, "Desert", "Paldea", Random.nextInt(15, 30)),
-        LocationUiModel(7, "Flower", "Paldea", Random.nextInt(10, 25)),
-        LocationUiModel(8, "Forest", "Paldea", Random.nextInt(30, 60)),
-        LocationUiModel(9, "Lake", "Paldea", Random.nextInt(20, 45)),
-        LocationUiModel(10, "Mountain", "Paldea", Random.nextInt(40, 75))
+        LocationUiModel(5, "Coastal", "Paldea", Random.nextInt(60, 100)),
+        LocationUiModel(6, "Desert", "Paldea", Random.nextInt(15, 30))
     )
 
-    // --- CỖ MÁY TẠO DỮ LIỆU NGẪU NHIÊN CHO TỪNG BIOME ---
     fun getEncountersForLocation(locationId: Int): List<EncounterGroup> {
         val groups = mutableListOf<EncounterGroup>()
-
-        // 1. Tạo nhóm Overworld (Xuất hiện ban ngày)
-        groups.add(
-            EncounterGroup(
-                methodTitle = "Overworld",
-                methodDescription = "Visible Pokémon in route, grass, ocean etc...",
-                encounters = generateRandomEncounters(count = Random.nextInt(4, 8))
-            )
-        )
-
-        // 2. Tạo nhóm Nighttime (Chỉ xuất hiện ban đêm)
-        if (Random.nextBoolean()) { // 50% cơ hội Biome này có Pokémon ăn đêm
-            groups.add(
-                EncounterGroup(
-                    methodTitle = "Nighttime only",
-                    methodDescription = "Pokémon that only appear when the sun goes down.",
-                    icon = "moon",
-                    encounters = generateRandomEncounters(count = Random.nextInt(1, 4))
-                )
-            )
-        }
-
-        // 3. Tạo nhóm Fishing (Câu cá)
-        if (locationId in listOf(2, 5, 9)) { // Chỉ Beach, Coastal, Lake mới có câu cá
-            groups.add(
-                EncounterGroup(
-                    methodTitle = "Surfing / Fishing",
-                    methodDescription = "Pokémon found in the water or by using a rod.",
-                    icon = "water",
-                    encounters = generateRandomEncounters(count = Random.nextInt(2, 5))
-                )
-            )
-        }
-
+        groups.add(EncounterGroup("Overworld", "Visible Pokémon in route, grass, ocean etc...", null, generateRandomEncounters(Random.nextInt(4, 8))))
+        if (Random.nextBoolean()) groups.add(EncounterGroup("Nighttime only", "Pokémon that only appear when the sun goes down.", "moon", generateRandomEncounters(Random.nextInt(1, 4))))
+        if (Random.nextBoolean()) groups.add(EncounterGroup("Surfing / Fishing", "Pokémon found in the water or by using a rod.", "water", generateRandomEncounters(Random.nextInt(2, 5))))
         return groups
     }
 
-    // Hàm tiện ích tự động bốc Pokémon và random tỉ lệ
     private fun generateRandomEncounters(count: Int): List<EncounterUiModel> {
         val mockPokemonList = listOf(
-            Pair("Pikachu", 25), Pair("Charizard", 6), Pair("Bulbasaur", 1), Pair("Squirtle", 7),
-            Pair("Eevee", 133), Pair("Snorlax", 143), Pair("Gengar", 143), Pair("Dragonite", 149),
-            Pair("Lucario", 149), Pair("Garchomp", 445), Pair("Togekiss", 468), Pair("Sylveon", 468),
-            Pair("Oranguru", 765), Pair("Lokix", 924), Pair("Scyther", 123), Pair("Breloom", 286)
+            Triple("Pikachu", 25, 0xFFFFCE4B), Triple("Charizard", 6, 0xFFFB6C6C), Triple("Bulbasaur", 1, 0xFF48D0B0),
+            Triple("Squirtle", 7, 0xFF76BDFE), Triple("Gengar", 94, 0xFF735797), Triple("Lucario", 448, 0xFFC22E28),
+            Triple("Garchomp", 445, 0xFF6F35FC), Triple("Sylveon", 700, 0xFFEE99AC), Triple("Scyther", 123, 0xFFA6B91A),
+            Triple("Umbreon", 197, 0xFF705848), Triple("Metagross", 444, 0xFFB8B8D0), Triple("Glaceon", 471, 0xFF96D9D6)
         )
-
         val encounters = mutableListOf<EncounterUiModel>()
-
-        // Xáo trộn danh sách và lấy ra số lượng cần thiết
         val shuffledPokemon = mockPokemonList.shuffled().take(count)
 
         for (pokemon in shuffledPokemon) {
-            val rate = Random.nextInt(1, 65) // Random tỉ lệ từ 1% đến 65%
-
-            // Tự động gán màu: >= 40% Xanh, >= 15% Vàng, còn lại Đỏ
-            val rateColor = when {
-                rate >= 40 -> 0xFF2ECC71 // Màu Xanh lá
-                rate >= 15 -> 0xFFF1C40F // Màu Vàng
-                else -> 0xFFE74C3C       // Màu Đỏ
-            }
-
-            val minLevel = Random.nextInt(5, 40)
-            val maxLevel = minLevel + Random.nextInt(5, 20)
-
-            // Random version: Có con chỉ có ở Scarlet, có con Violet, có con cả 2
-            val versions = when (Random.nextInt(3)) {
-                0 -> listOf("Scarlet")
-                1 -> listOf("Violet")
-                else -> listOf("Scarlet", "Violet")
-            }
-
+            val rate = Random.nextInt(1, 65)
             encounters.add(
                 EncounterUiModel(
                     pokemonName = pokemon.first,
                     imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${pokemon.second}.png",
-                    levelRange = "Level $minLevel-$maxLevel",
-                    rate = "$rate%",
-                    rateColor = rateColor,
-                    versions = versions
+                    levelRange = "Level ${Random.nextInt(5, 40)}-${Random.nextInt(45, 60)}",
+                    rate = "$rate%", typeColor = pokemon.third.toLong(),
+                    versions = listOf(selectedVersion) // Bắt đúng version đang chọn
                 )
             )
         }
-
-        // Sắp xếp lại theo tỉ lệ xuất hiện giảm dần (Con nào dễ gặp xếp trên)
         return encounters.sortedByDescending { it.rate.replace("%", "").toInt() }
     }
 }

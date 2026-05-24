@@ -1,8 +1,6 @@
 package com.example.pokedex.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,16 +33,12 @@ fun LocationDexScreen(
     onOpenMenu: () -> Unit,
     viewModel: LocationViewModel = viewModel()
 ) {
-    var isFilterOpen by remember { mutableStateOf(false) }
     var selectedLocation by remember { mutableStateOf<LocationUiModel?>(null) }
+    var isVersionSheetOpen by remember { mutableStateOf(false) }
 
-    // NẾU CÓ CHỌN ĐỊA ĐIỂM -> HIỂN THỊ MÀN HÌNH CHI TIẾT
+    // MÀN HÌNH CHI TIẾT
     if (selectedLocation != null) {
-        LocationDetailScreen(
-            location = selectedLocation!!,
-            viewModel = viewModel,
-            onBack = { selectedLocation = null }
-        )
+        LocationDetailScreen(location = selectedLocation!!, viewModel = viewModel, onBack = { selectedLocation = null })
         return
     }
 
@@ -53,59 +47,62 @@ fun LocationDexScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Location Dex", color = Color(0xFF334F6A)) },
-                navigationIcon = {
-                    IconButton(onClick = onOpenMenu) { Icon(Icons.Default.Menu, tint = Color(0xFF7B8E9C), contentDescription = "Menu") }
-                },
-                actions = {
-                    IconButton(onClick = { }) { Icon(Icons.Default.Settings, tint = Color(0xFF7B8E9C), contentDescription = "Settings") }
-                },
+                navigationIcon = { IconButton(onClick = onOpenMenu) { Icon(Icons.Default.Menu, tint = Color(0xFF7B8E9C), contentDescription = "Menu") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF4F6F8))
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { isFilterOpen = true },
-                containerColor = Color(0xFF334F6A),
-                contentColor = Color.White,
-                shape = RoundedCornerShape(50)
-            ) {
-                Icon(Icons.Default.FilterAlt, contentDescription = "Filter")
-            }
         },
         containerColor = Color(0xFFF4F6F8)
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-            // Thanh hiển thị version đang chọn (Scarlet / Violet) giống thiết kế
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(if (viewModel.selectedVersion == "Scarlet") Color(0xFFE62828) else Color.LightGray).padding(8.dp), contentAlignment = Alignment.Center) {
-                    Text("Scarlet", color = if (viewModel.selectedVersion == "Scarlet") Color.White else Color.DarkGray, fontWeight = FontWeight.Bold)
-                }
-                Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(if (viewModel.selectedVersion == "Violet") Color(0xFF5A2E8A) else Color.LightGray).padding(8.dp), contentAlignment = Alignment.Center) {
-                    Text("Violet", color = if (viewModel.selectedVersion == "Violet") Color.White else Color.DarkGray, fontWeight = FontWeight.Bold)
-                }
+
+            // --- NÚT BẤM CHỌN GAME VERSION Ở TRÊN CÙNG ---
+            val currentVersionColor = getVersionColorLocation(viewModel.selectedVersion)
+            val isLightText = viewModel.selectedVersion.contains("White") || viewModel.selectedVersion == "Yellow" || viewModel.selectedVersion.contains("Let's Go Pikachu")
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(currentVersionColor)
+                    .clickable { isVersionSheetOpen = true }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(viewModel.selectedVersion.uppercase(), color = if (isLightText) Color.DarkGray else Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(viewModel.locationList) { location ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth().clickable { selectedLocation = location },
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Info, contentDescription = "Info", tint = Color.LightGray, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(location.name, fontSize = 18.sp, color = Color(0xFF334F6A))
-                                Text(" (Biome) in ${location.region}", fontSize = 14.sp, color = Color.Gray)
+            // Lọc địa điểm theo Vùng đất (Region) của Game Version đang chọn
+            val targetRegion = viewModel.getRegionForVersion(viewModel.selectedVersion)
+            val filteredLocations = viewModel.allLocations.filter { it.region == targetRegion }
+
+            if (filteredLocations.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No locations found for this region.", color = Color.Gray)
+                }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredLocations) { location ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { selectedLocation = location },
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Place, contentDescription = "Location", tint = Color.LightGray, modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(location.name, fontSize = 18.sp, color = Color(0xFF334F6A), fontWeight = FontWeight.Bold)
+                                }
+                                Text(" (Biome) in ${location.region}", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
+                                Text("${location.pokemonCount} Pokémon", fontSize = 14.sp, color = Color.Gray)
                             }
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFF0F0F0))
-                            Text("${location.pokemonCount} Pokémon", fontSize = 14.sp, color = Color.Gray)
                         }
                     }
                 }
@@ -113,20 +110,35 @@ fun LocationDexScreen(
         }
     }
 
-    // --- BOTTOM SHEET CHỌN GAME VERSION ---
-    if (isFilterOpen) {
-        ModalBottomSheet(onDismissRequest = { isFilterOpen = false }, containerColor = Color.White) {
+    // --- BOTTOM SHEET CHỌN VERSION (TỪ GEN 1 ĐẾN GEN 9) ---
+    if (isVersionSheetOpen) {
+        ModalBottomSheet(onDismissRequest = { isVersionSheetOpen = false }, containerColor = Color.White) {
             Column(modifier = Modifier.padding(horizontal = 16.dp).fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Select game version", fontSize = 20.sp, color = Color(0xFF6A7F9C), modifier = Modifier.padding(bottom = 16.dp))
 
-                // Mẫu nhanh vài Gen (Tái sử dụng style của bạn)
-                Text("Gen 8", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
-                VersionRow(listOf("Sword", "Shield"), { viewModel.setVersion(it); isFilterOpen = false })
-                VersionRow(listOf("Brilliant Diamond", "Shining Pearl"), { viewModel.setVersion(it); isFilterOpen = false })
-                VersionRow(listOf("Legends: Arceus"), { viewModel.setVersion(it); isFilterOpen = false })
+                @Composable
+                fun VRow(v1: String, v2: String? = null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                        Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(getVersionColorLocation(v1)).clickable { viewModel.setVersion(v1); isVersionSheetOpen = false }.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                            Text(v1, color = if (v1.contains("White") || v1 == "Yellow") Color.DarkGray else Color.White, fontWeight = FontWeight.Bold)
+                        }
+                        if (v2 != null) {
+                            Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(getVersionColorLocation(v2)).clickable { viewModel.setVersion(v2); isVersionSheetOpen = false }.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                                Text(v2, color = if (v2.contains("White") || v2 == "Yellow") Color.DarkGray else Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        } else { Spacer(modifier = Modifier.weight(1f)) }
+                    }
+                }
 
-                Text("Gen 9", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp))
-                VersionRow(listOf("Scarlet", "Violet"), { viewModel.setVersion(it); isFilterOpen = false })
+                Text("Gen 1", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Red", "Blue"); VRow("Yellow")
+                Text("Gen 2", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Gold", "Silver"); VRow("Crystal")
+                Text("Gen 3", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Ruby", "Sapphire"); VRow("Emerald"); VRow("FireRed", "LeafGreen")
+                Text("Gen 4", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Diamond", "Pearl"); VRow("Platinum"); VRow("HeartGold", "SoulSilver")
+                Text("Gen 5", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Black", "White"); VRow("Black 2", "White 2")
+                Text("Gen 6", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("X", "Y"); VRow("Omega Ruby", "Alpha Sapphire")
+                Text("Gen 7", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Sun", "Moon"); VRow("Ultra Sun", "Ultra Moon")
+                Text("Gen 8", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Sword", "Shield"); VRow("Brilliant Diamond", "Shining Pearl"); VRow("Legends: Arceus")
+                Text("Gen 9", color = Color.Gray, modifier = Modifier.padding(vertical = 8.dp)); VRow("Scarlet", "Violet")
 
                 Spacer(modifier = Modifier.height(40.dp))
             }
@@ -135,7 +147,7 @@ fun LocationDexScreen(
 }
 
 // =========================================================================
-// MÀN HÌNH CHI TIẾT ĐỊA ĐIỂM (OVERWORLD, NIGHTTIME...)
+// MÀN HÌNH CHI TIẾT
 // =========================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,7 +157,6 @@ fun LocationDetailScreen(location: LocationUiModel, viewModel: LocationViewModel
             TopAppBar(
                 title = { Text("") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, tint = Color(0xFF334F6A), contentDescription = "Back") } },
-                actions = { IconButton(onClick = { }) { Icon(Icons.Default.Settings, tint = Color(0xFF7B8E9C), contentDescription = "Settings") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
@@ -153,45 +164,21 @@ fun LocationDetailScreen(location: LocationUiModel, viewModel: LocationViewModel
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState())) {
 
-            // Header
             Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(location.name, fontSize = 28.sp, color = Color(0xFF334F6A))
-                    Text(" (Biome) ${location.region}", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(start = 8.dp, top = 6.dp))
-                }
+                Text(location.name, fontSize = 28.sp, color = Color(0xFF334F6A), fontWeight = FontWeight.Bold)
+                Text(" (Biome) in ${location.region}", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
 
-                // Cảnh báo vàng (Giống thiết kế)
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Color(0xFFFFF9D1)).padding(16.dp), contentAlignment = Alignment.Center) {
-                    Text("Work on this location is still in progress.\nData may be incomplete and/or incorrect.", color = Color(0xFFB8860B), textAlign = TextAlign.Center, fontSize = 13.sp)
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Expand", tint = Color(0xFF334F6A))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Locations with this biome", color = Color(0xFF334F6A), fontWeight = FontWeight.Bold)
-                    }
+                    Text("Encounters are dynamically generated based on biome.", color = Color(0xFFB8860B), textAlign = TextAlign.Center, fontSize = 13.sp)
                 }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // LẶP QUA CÁC NHÓM ENCOUNTER (Overworld, Nighttime...)
-            val dynamicEncounters = remember(location.id) {
-                viewModel.getEncountersForLocation(location.id)
-            }
-
-            // LẶP QUA CÁC NHÓM ENCOUNTER (Overworld, Nighttime...)
-            dynamicEncounters.forEach { group ->
-                EncounterGroupSection(group)
-            }
+            val dynamicEncounters = remember(location.id) { viewModel.getEncountersForLocation(location.id) }
+            dynamicEncounters.forEach { group -> EncounterGroupSection(group) }
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -199,89 +186,74 @@ fun LocationDetailScreen(location: LocationUiModel, viewModel: LocationViewModel
 @Composable
 fun EncounterGroupSection(group: EncounterGroup) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        // Tên nhóm (Overworld / Nighttime)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (group.icon == "moon") {
-                Icon(Icons.Default.DarkMode, contentDescription = "Night", tint = Color(0xFF334F6A), modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-            } else if (group.icon == "water") {
-                // Thêm icon giọt nước cho phần Câu cá
-                Icon(Icons.Default.WaterDrop, contentDescription = "Water", tint = Color(0xFF334F6A), modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-            Text(group.methodTitle, fontSize = 22.sp, color = Color(0xFF334F6A))
+            if (group.icon == "moon") { Icon(Icons.Default.DarkMode, contentDescription = "Night", tint = Color(0xFF334F6A), modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)) }
+            else if (group.icon == "water") { Icon(Icons.Default.WaterDrop, contentDescription = "Water", tint = Color(0xFF334F6A), modifier = Modifier.size(20.dp)); Spacer(modifier = Modifier.width(8.dp)) }
+            Text(group.methodTitle, fontSize = 22.sp, color = Color(0xFF334F6A), fontWeight = FontWeight.Bold)
         }
+        if (group.methodDescription.isNotEmpty()) { Text(group.methodDescription, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp), textAlign = TextAlign.Center) }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Vẽ từng thẻ Pokémon
         group.encounters.forEach { encounter ->
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFCFCFC)),
-                border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                colors = CardDefaults.cardColors(containerColor = Color(encounter.typeColor)),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Cột thông tin bên trái
                     Column(modifier = Modifier.weight(1f)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(encounter.pokemonName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5A2E8A))
-                            Text(encounter.levelRange, fontSize = 14.sp, color = Color(0xFF334F6A))
-                            // Tỉ lệ % có khung nền nhạt
-                            Box(modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color(encounter.rateColor).copy(alpha = 0.1f)).padding(horizontal = 8.dp, vertical = 4.dp)) {
-                                Text(encounter.rate, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(encounter.rateColor))
+                            Text(encounter.pokemonName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(encounter.levelRange, fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+                            Box(modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.Black.copy(alpha = 0.2f)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                                Text(encounter.rate, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
-
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        // Tag Version (Scarlet / Violet)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             encounter.versions.forEach { version ->
-                                val vColor = if (version == "Scarlet") Color(0xFFE62828) else Color(0xFF5A2E8A)
-                                Box(
-                                    modifier = Modifier.weight(1f)
-                                        .clip(RoundedCornerShape(50))
-                                        .background(Color.White)
-                                        .border(1.dp, vColor.copy(alpha = 0.3f), RoundedCornerShape(50))
-                                        .padding(vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(version, fontSize = 12.sp, color = vColor)
+                                Box(modifier = Modifier.weight(1f).clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.25f)).padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                                    Text(version, fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Medium)
                                 }
                             }
                         }
                     }
-
-                    // Ảnh Pokémon bên phải
                     Spacer(modifier = Modifier.width(12.dp))
-                    AsyncImage(
-                        model = encounter.imageUrl,
-                        contentDescription = encounter.pokemonName,
-                        modifier = Modifier.size(70.dp),
-                        contentScale = ContentScale.Fit
-                    )
+                    AsyncImage(model = encounter.imageUrl, contentDescription = encounter.pokemonName, modifier = Modifier.size(70.dp), contentScale = ContentScale.Fit)
                 }
             }
         }
     }
 }
 
-// --- HÀM TÁI SỬ DỤNG CHO BẢNG FILTER ---
-@Composable
-fun VersionRow(versions: List<String>, onSelect: (String) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        versions.forEach { version ->
-            val bgColor = getVersionColor(version)
-            Box(
-                modifier = Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(bgColor).clickable { onSelect(version) }.padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                val isLightColor = version.contains("White") || version == "Yellow" || version == "Let's Go Pikachu"
-                Text(text = version, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = if (isLightColor) Color.DarkGray else Color.White)
-            }
-        }
-        if (versions.size == 1) Spacer(modifier = Modifier.weight(1f))
+// Bảng màu cho Game Version (Tích hợp sẵn để tránh lỗi thiếu hàm)
+fun getVersionColorLocation(version: String): Color {
+    return when (version) {
+        "Red", "FireRed" -> Color(0xFFE3350D)
+        "Blue" -> Color(0xFF3165BC)
+        "Yellow" -> Color(0xFFF6D830)
+        "Gold", "HeartGold" -> Color(0xFFDAA520)
+        "Silver", "SoulSilver" -> Color(0xFFC0C0C0)
+        "Crystal" -> Color(0xFF4DD0E1)
+        "Ruby", "Omega Ruby" -> Color(0xFFA00000)
+        "Sapphire", "Alpha Sapphire" -> Color(0xFF0000A0)
+        "Emerald" -> Color(0xFF008000)
+        "LeafGreen" -> Color(0xFF32CD32)
+        "Diamond", "Brilliant Diamond" -> Color(0xFFAAAADD)
+        "Pearl", "Shining Pearl" -> Color(0xFFFFAABB)
+        "Platinum" -> Color(0xFF999999)
+        "Black", "Black 2" -> Color(0xFF444444)
+        "White", "White 2" -> Color(0xFFE3E3E3)
+        "X" -> Color(0xFF0055A4)
+        "Y" -> Color(0xFFEF4135)
+        "Sun", "Ultra Sun" -> Color(0xFFF18E38)
+        "Moon", "Ultra Moon" -> Color(0xFF5394CE)
+        "Sword" -> Color(0xFF00A2E8)
+        "Shield" -> Color(0xFFED1C24)
+        "Scarlet" -> Color(0xFFE62828)
+        "Violet" -> Color(0xFF5A2E8A)
+        "Legends: Arceus" -> Color(0xFF2A595C)
+        else -> Color(0xFF334F6A)
     }
 }

@@ -13,8 +13,11 @@ import com.example.pokedex.ui.screens.HomeScreen
 import com.example.pokedex.ui.screens.TeamBuilderScreen
 import com.example.pokedex.ui.screens.PokemonDetailScreen
 import com.example.pokedex.ui.screens.ItemDexScreen
-// --- 1. IMPORT MÀN HÌNH LOCATION DEX ---
 import com.example.pokedex.ui.screens.LocationDexScreen
+import com.example.pokedex.ui.screens.MoveDexScreen
+
+import com.example.pokedex.ui.screens.AbilityDexScreen
+import com.example.pokedex.ui.screens.NatureDexScreen
 import com.example.pokedex.viewmodel.PokemonViewModel
 import com.example.pokedex.ui.theme.PokeDexTheme
 
@@ -77,12 +80,28 @@ class MainActivity : ComponentActivity() {
                                     onOpenMenu = { scope.launch { drawerState.open() } }
                                 )
                             }
-                            // --- BỔ SUNG ROUTE "locations" ĐỂ MỞ LOCATION DEX ---
                             "locations" -> {
                                 LocationDexScreen(
                                     onOpenMenu = { scope.launch { drawerState.open() } }
                                 )
                             }
+                            "moves" -> {
+                                MoveDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                            }
+
+                            "abilities" -> {
+                                AbilityDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                            }
+
+                            "natures" -> {
+                                NatureDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                        }
                             else -> {
                                 HomeScreen(
                                     onOpenMenu = { scope.launch { drawerState.open() } },

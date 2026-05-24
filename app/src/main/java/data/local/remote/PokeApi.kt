@@ -118,6 +118,23 @@ interface PokeApiService {
 
     @GET("item/{name}")
     suspend fun getItemDetail(@Path("name") name: String): ItemDetailResponse
+
+    @GET("move")
+    suspend fun getMoves(@Query("limit") limit: Int = 930, @Query("offset") offset: Int = 0): MoveListResponse
+
+    @GET("ability")
+    suspend fun getAbilities(@Query("limit") limit: Int = 360, @Query("offset") offset: Int = 0): AbilityListResponse
+
+    @GET("ability/{name}")
+    suspend fun getAbilityDetail(@Path("name") name: String): AbilityDetailResponse
+    @GET("move/{name}")
+    suspend fun getMoveDetail(@Path("name") name: String): MoveDetailResponse
+
+    @GET("nature")
+    suspend fun getNatures(@Query("limit") limit: Int = 30): NatureListResponse
+
+    @GET("nature/{name}")
+    suspend fun getNatureDetail(@Path("name") name: String): NatureDetailResponse
 }
 
 object RetrofitClient {
@@ -126,3 +143,45 @@ object RetrofitClient {
         Retrofit.Builder().baseUrl(BASE_URL).addConverterFactory(GsonConverterFactory.create()).build().create(PokeApiService::class.java)
     }
 }
+data class MoveListResponse(val results: List<NamedApiResource>)
+
+data class MoveDetailResponse(
+    val id: Int,
+    val name: String,
+    val accuracy: Int?,
+    val power: Int?,
+    val pp: Int?,
+    val type: NamedApiResource,
+    val damage_class: NamedApiResource, // Phân loại: physical, special, status
+    val effect_entries: List<MoveEffectEntry>,
+    val flavor_text_entries: List<MoveFlavorText>,
+    val generation: NamedApiResource // Thuộc Gen mấy
+)
+
+data class MoveEffectEntry(val effect: String, val short_effect: String, val language: NamedApiResource)
+data class MoveFlavorText(val flavor_text: String, val language: NamedApiResource)
+data class AbilityListResponse(val results: List<NamedApiResource>)
+
+data class AbilityDetailResponse(
+    val id: Int,
+    val name: String,
+    val generation: NamedApiResource,
+    val effect_entries: List<AbilityEffectEntry>,
+    val flavor_text_entries: List<AbilityFlavorText>,
+    val pokemon: List<AbilityPokemon> // Danh sách Pokemon sở hữu Ability này
+)
+
+data class AbilityEffectEntry(val effect: String, val short_effect: String, val language: NamedApiResource)
+data class AbilityFlavorText(val flavor_text: String, val language: NamedApiResource)
+data class AbilityPokemon(val is_hidden: Boolean, val pokemon: NamedApiResource)
+
+data class NatureListResponse(val results: List<NamedApiResource>)
+
+data class NatureDetailResponse(
+    val id: Int,
+    val name: String,
+    val decreased_stat: NamedApiResource?,
+    val increased_stat: NamedApiResource?,
+    val hates_flavor: NamedApiResource?,
+    val likes_flavor: NamedApiResource?
+)
