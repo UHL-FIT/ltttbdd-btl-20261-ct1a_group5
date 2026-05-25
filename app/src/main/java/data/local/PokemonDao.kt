@@ -9,17 +9,27 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface PokemonDao {
 
-    // ĐỔI TÊN và BỎ "suspend" để trị dứt điểm lỗi KSP
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun savePokemonMark(state: PokemonStateEntity)
+    // --- QUẢN LÝ TRẠNG THÁI FAVORITE / CAUGHT ---
 
+    // ĐÃ THÊM LẠI "suspend"
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun savePokemonMark(state: PokemonStateEntity)
+
+    // Flow tự xử lý luồng nên không cần suspend
     @Query("SELECT id FROM pokemon_state WHERE isFavorite = 1")
     fun getFavoriteIds(): Flow<List<Int>>
 
     @Query("SELECT id FROM pokemon_state WHERE isCaught = 1")
     fun getCaughtIds(): Flow<List<Int>>
 
-    // ĐỔI TÊN và BỎ "suspend"
+    // ĐÃ THÊM LẠI "suspend"
     @Query("SELECT * FROM pokemon_state WHERE id = :id")
-    fun checkPokemonMark(id: Int): PokemonStateEntity?
+    suspend fun checkPokemonMark(id: Int): PokemonStateEntity?
+
+    // --- MỚI THÊM: QUẢN LÝ ĐỘI HÌNH TEAM BUILDER ---
+
+    // Lưu thông tin Team (Để demo đơn giản, chúng ta lưu tạm id của 6 pokemon thành chuỗi "1,4,7...")
+    // Nếu bạn có Entity riêng cho Team thì đổi lại Type nhé.
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveTeam(team: TeamEntity)
 }

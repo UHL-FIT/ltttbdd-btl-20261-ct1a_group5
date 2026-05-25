@@ -66,9 +66,14 @@ data class VersionEncounterDetail(val version: NamedApiResource)
 // --- TYPE EFFECTIVENESS ---
 data class TypeDetailResponse(val damage_relations: DamageRelations)
 data class DamageRelations(
+    // Sát thương nhận vào (Phòng thủ)
     val double_damage_from: List<NamedApiResource>,
     val half_damage_from: List<NamedApiResource>,
-    val no_damage_from: List<NamedApiResource>
+    val no_damage_from: List<NamedApiResource>,
+    // Sát thương gây ra (Tấn công)
+    val double_damage_to: List<NamedApiResource>,
+    val half_damage_to: List<NamedApiResource>,
+    val no_damage_to: List<NamedApiResource>
 )
 
 // ==========================================

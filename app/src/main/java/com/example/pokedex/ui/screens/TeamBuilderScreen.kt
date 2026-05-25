@@ -1,11 +1,17 @@
 package com.example.pokedex.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -16,12 +22,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.example.pokedex.ui.components.getTypeColor
+
 import com.example.pokedex.viewmodel.PokemonUiState
 import com.example.pokedex.viewmodel.PokemonViewModel
 
@@ -31,11 +42,11 @@ fun TeamBuilderScreen(
     onOpenMenu: () -> Unit,
     viewModel: PokemonViewModel = viewModel()
 ) {
+    // Chỉ giữ lại trạng thái UI tìm kiếm ở local
     var isSelectingPokemon by remember { mutableStateOf(false) }
-    var teamName by remember { mutableStateOf("") }
-    var selectedTeam by remember { mutableStateOf(listOf<PokemonUiModel>()) }
     var searchQuery by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
     val uiState = viewModel.uiState
     val allPokemon = if (uiState is PokemonUiState.Success) uiState.pokemonList else emptyList()
 
@@ -44,6 +55,7 @@ fun TeamBuilderScreen(
     }
 
     if (isSelectingPokemon) {
+        // --- MÀN HÌNH CHỌN POKÉMON ---
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -72,8 +84,9 @@ fun TeamBuilderScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    if (selectedTeam.size < 6 && !selectedTeam.contains(pokemon)) {
-                                        selectedTeam = selectedTeam + pokemon
+                                    // SỬ DỤNG LƯU TRỮ TỪ VIEWMODEL
+                                    if (viewModel.selectedTeam.size < 6 && !viewModel.selectedTeam.any { it.id == pokemon.id }) {
+                                        viewModel.selectedTeam = viewModel.selectedTeam + pokemon
                                     }
                                     isSelectingPokemon = false
                                     searchQuery = ""
@@ -101,18 +114,15 @@ fun TeamBuilderScreen(
                                             text = type.uppercase(),
                                             fontSize = 10.sp,
                                             color = Color.White,
-                                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color.DarkGray).padding(horizontal = 6.dp, vertical = 2.dp)
+                                            modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(getTypeColor(type.lowercase())).padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                     }
                                 }
                             }
 
-                            Icon(Icons.Default.FavoriteBorder, contentDescription = "Fav", tint = Color.Gray)
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            if (selectedTeam.contains(pokemon)) {
-                                Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = Color.Green)
+                            if (viewModel.selectedTeam.any { it.id == pokemon.id }) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = "Selected", tint = Color(0xFF2ECC71))
                             } else {
                                 Icon(Icons.Default.CheckCircleOutline, contentDescription = "Select", tint = Color.LightGray)
                             }
@@ -123,20 +133,32 @@ fun TeamBuilderScreen(
             }
         }
     } else {
+        // --- MÀN HÌNH CHỈNH SỬA ĐỘI HÌNH CHÍNH ---
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Team Editor", fontWeight = FontWeight.Bold, fontSize = 24.sp) },
+                    title = { Text("Team Editor", fontWeight = FontWeight.Bold, fontSize = 24.sp, color = Color(0xFF334F6A)) },
                     navigationIcon = {
-                        IconButton(onClick = onOpenMenu) { Icon(Icons.Default.Menu, contentDescription = "Menu") }
+                        IconButton(onClick = onOpenMenu) { Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF7B8E9C)) }
                     },
                     actions = {
-                        TextButton(onClick = { /* Xử lý Lưu đội hình */ }) {
-                            Text("Save", color = Color.Gray, fontSize = 16.sp)
+                        TextButton(onClick = {
+                            if (viewModel.teamName.isBlank()) {
+                                Toast.makeText(context, "Please enter a team name!", Toast.LENGTH_SHORT).show()
+                            } else if (viewModel.selectedTeam.isEmpty()) {
+                                Toast.makeText(context, "Please add at least 1 Pokémon!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                viewModel.saveTeam(viewModel.teamName, viewModel.selectedTeam)
+                                Toast.makeText(context, "Team saved successfully!", Toast.LENGTH_SHORT).show()
+                            }
+                        }) {
+                            Text("Save", color = Color(0xFF334F6A), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFF4F6F8))
                 )
-            }
+            },
+            containerColor = Color(0xFFF4F6F8)
         ) { padding ->
             Column(
                 modifier = Modifier
@@ -146,11 +168,12 @@ fun TeamBuilderScreen(
             ) {
                 Text("TEAM NAME", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
                 OutlinedTextField(
-                    value = teamName,
-                    onValueChange = { teamName = it },
-                    placeholder = { Text("Team Name") },
+                    value = viewModel.teamName,
+                    onValueChange = { viewModel.teamName = it },
+                    placeholder = { Text("Enter Team Name...") },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(8.dp)
+                    shape = RoundedCornerShape(8.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -160,120 +183,176 @@ fun TeamBuilderScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("POKÉMON PARTY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Text("POKÉMON PARTY (${viewModel.selectedTeam.size}/6)", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                     Row {
-                        // Nút CLEAR để xóa nhanh cả đội hình
                         Button(
-                            onClick = { selectedTeam = emptyList() },
+                            onClick = { viewModel.selectedTeam = emptyList() },
                             contentPadding = PaddingValues(horizontal = 12.dp),
                             modifier = Modifier.height(32.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.LightGray, contentColor = Color.Black)
-                        ) {
-                            Text("CLEAR", fontSize = 12.sp)
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE5E9EC), contentColor = Color.DarkGray)
+                        ) { Text("CLEAR", fontSize = 12.sp) }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = { isSelectingPokemon = true },
                             contentPadding = PaddingValues(horizontal = 12.dp),
                             modifier = Modifier.height(32.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334F6A))
-                        ) {
-                            Text("ADD", fontSize = 12.sp)
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF334F6A)),
+                            enabled = viewModel.selectedTeam.size < 6
+                        ) { Text("ADD", fontSize = 12.sp) }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0)).padding(16.dp).defaultMinSize(minHeight = 120.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(16.dp).defaultMinSize(minHeight = 120.dp)
                 ) {
-                    if (selectedTeam.isEmpty()) {
+                    if (viewModel.selectedTeam.isEmpty()) {
                         Text("No Pokémon added yet. Click ADD.", color = Color.Gray, modifier = Modifier.align(Alignment.Center))
                     } else {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            selectedTeam.forEach { pokemon ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(60.dp)) {
-                                    AsyncImage(
-                                        model = pokemon.imageUrl,
-                                        contentDescription = pokemon.name,
-                                        modifier = Modifier.size(60.dp).clip(RoundedCornerShape(8.dp)).background(Color.White)
-                                    )
-                                    Text(text = pokemon.name, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp), maxLines = 1)
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            viewModel.selectedTeam.chunked(3).forEach { rowList ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowList.forEach { pokemon ->
+                                        Box(
+                                            modifier = Modifier.weight(1f),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(65.dp)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .background(Color(0xFFF4F6F8)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    AsyncImage(
+                                                        model = pokemon.imageUrl,
+                                                        contentDescription = pokemon.name,
+                                                        modifier = Modifier.size(55.dp),
+                                                        contentScale = ContentScale.Fit
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = pokemon.name,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF334F6A),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(18.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFFE74C3C))
+                                                    .align(Alignment.TopEnd)
+                                                    .clickable { viewModel.selectedTeam = viewModel.selectedTeam - pokemon },
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(10.dp))
+                                            }
+                                        }
+                                    }
+
+                                    if (rowList.size < 3) {
+                                        repeat(3 - rowList.size) {
+                                            Spacer(modifier = Modifier.weight(1f))
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                if (selectedTeam.isNotEmpty()) {
+                if (viewModel.selectedTeam.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // =======================================================
-                    // --- TEAM STATS (ĐÃ ĐƯỢC TÍNH TOÁN THÔNG MINH LÊN UI) ---
-                    // =======================================================
-                    Text("Team Stats", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
+                    Text("Team Stats (Averages)", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF334F6A), modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color(0xFFF0F0F0)).padding(16.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(16.dp)) {
                         Column {
-                            Text("Each stat is an average of the same stat from your entire team.", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.align(Alignment.CenterHorizontally))
-                            Spacer(modifier = Modifier.height(16.dp))
-
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                Text("Min", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
-                                Text("Max", fontWeight = FontWeight.Bold, modifier = Modifier.width(40.dp))
+                                Text("Min", fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp, textAlign = TextAlign.Center)
+                                Text("Max", fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.width(40.dp), fontSize = 12.sp, textAlign = TextAlign.Center)
                             }
 
-                            // Tính chỉ số trung bình (đảm bảo không crash nếu chưa có đủ thuộc tính)
-                            val avgHp = selectedTeam.map { it.hp }.average().toInt()
-                            val avgAtk = selectedTeam.map { it.attack }.average().toInt()
-                            val avgDef = selectedTeam.map { it.defense }.average().toInt()
-                            val avgSpAtk = selectedTeam.map { it.spAttack }.average().toInt()
-                            val avgSpDef = selectedTeam.map { it.spDefense }.average().toInt()
-                            val avgSpd = selectedTeam.map { it.speed }.average().toInt()
+                            val avgHp = viewModel.selectedTeam.map { it.hp }.average().toInt()
+                            val avgAtk = viewModel.selectedTeam.map { it.attack }.average().toInt()
+                            val avgDef = viewModel.selectedTeam.map { it.defense }.average().toInt()
+                            val avgSpAtk = viewModel.selectedTeam.map { it.spAttack }.average().toInt()
+                            val avgSpDef = viewModel.selectedTeam.map { it.spDefense }.average().toInt()
+                            val avgSpd = viewModel.selectedTeam.map { it.speed }.average().toInt()
                             val totalStats = avgHp + avgAtk + avgDef + avgSpAtk + avgSpDef + avgSpd
 
                             StatRow("HP", avgHp, Color(0xFFFF5959), calcMinHp(avgHp), calcMaxHp(avgHp))
                             StatRow("Attack", avgAtk, Color(0xFFF5AC78), calcMinStat(avgAtk), calcMaxStat(avgAtk))
                             StatRow("Defense", avgDef, Color(0xFFFAE078), calcMinStat(avgDef), calcMaxStat(avgDef))
-                            StatRow("Sp. Attack", avgSpAtk, Color(0xFF9DB7F5), calcMinStat(avgSpAtk), calcMaxStat(avgSpAtk))
-                            StatRow("Sp. Defense", avgSpDef, Color(0xFFA7DB8D), calcMinStat(avgSpDef), calcMaxStat(avgSpDef))
+                            StatRow("Sp. Atk", avgSpAtk, Color(0xFF9DB7F5), calcMinStat(avgSpAtk), calcMaxStat(avgSpAtk))
+                            StatRow("Sp. Def", avgSpDef, Color(0xFFA7DB8D), calcMinStat(avgSpDef), calcMaxStat(avgSpDef))
                             StatRow("Speed", avgSpd, Color(0xFFFA92B2), calcMinStat(avgSpd), calcMaxStat(avgSpd))
 
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Total   $totalStats", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("The ranges shown on the right are for a level 100 Pokémon. Max values are based on a beneficial nature, 252 EVs, 31 IVs; Min values are based on a hindering nature, 0 EVs, 0 IVs.",
-                                fontSize = 9.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                            HorizontalDivider(color = Color(0xFFF4F6F8))
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Total Average: $totalStats", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF334F6A), modifier = Modifier.align(Alignment.CenterHorizontally))
                         }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // --- TYPE EFFECTIVENESS (Chưa làm logic phần này) ---
-                    Text("Type Effectiveness", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp))
+                    Text("Type Effectiveness Analysis", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF334F6A), modifier = Modifier.padding(horizontal = 16.dp))
                     Spacer(modifier = Modifier.height(8.dp))
-                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                        Text("Based on type of Pokémon in your team, it is:", fontSize = 14.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.height(16.dp))
 
-                        Text("Weak Against...", fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            EffectivenessChip("Water", "-1", Color(0xFF6390F0), Color(0xFF8DB0F5))
-                            EffectivenessChip("Rock", "-2", Color(0xFFB6A136), Color(0xFFD5C77F))
-                            EffectivenessChip("Ground", "-2", Color(0xFFE2BF65), Color(0xFFEFDF9E))
-                        }
+                    Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(12.dp)).background(Color.White).padding(16.dp)) {
+                        Column {
+                            val analysis = remember(viewModel.selectedTeam) { calculateTeamEffectiveness(viewModel.selectedTeam) }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                            Text("Weak Against (Team Vulnerabilities)", fontWeight = FontWeight.Bold, color = Color(0xFFE74C3C), fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (analysis.weaknesses.isEmpty()) {
+                                Text("Your team has no shared type weaknesses! Perfectly balanced.", color = Color.Gray, fontSize = 13.sp)
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(2),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.heightIn(max = 200.dp)
+                                ) {
+                                    items(analysis.weaknesses) { (type, score) ->
+                                        EffectivenessChip(type, score.toString(), getTypeColor(type.lowercase()))
+                                    }
+                                }
+                            }
 
-                        Text("Resistant Against...", fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                            EffectivenessChip("Steel", "1", Color(0xFFB7B7CE), Color(0xFFD1D1E0))
-                            EffectivenessChip("Poison", "1", Color(0xFFA33EA1), Color(0xFFC183C0))
-                            EffectivenessChip("Ice", "4", Color(0xFF96D9D6), Color(0xFFC0EBE9))
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            Text("Resistant Against (Team Defenses)", fontWeight = FontWeight.Bold, color = Color(0xFF2ECC71), fontSize = 14.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            if (analysis.resistances.isEmpty()) {
+                                Text("Your team has no major elemental resistances.", color = Color.Gray, fontSize = 13.sp)
+                            } else {
+                                LazyVerticalGrid(
+                                    columns = GridCells.Fixed(2),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.heightIn(max = 200.dp)
+                                ) {
+                                    items(analysis.resistances) { (type, score) ->
+                                        EffectivenessChip(type, "+$score", getTypeColor(type.lowercase()))
+                                    }
+                                }
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(40.dp))
@@ -283,7 +362,90 @@ fun TeamBuilderScreen(
     }
 }
 
-// --- CÁC HÀM UI PHỤ TRỢ ---
+data class TeamEffectivenessResult(
+    val weaknesses: List<Pair<String, Int>>,
+    val resistances: List<Pair<String, Int>>
+)
+
+fun calculateTeamEffectiveness(team: List<PokemonUiModel>): TeamEffectivenessResult {
+    val allTypes = listOf(
+        "NORMAL", "FIRE", "WATER", "ELECTRIC", "GRASS", "ICE", "FIGHTING", "POISON", "GROUND",
+        "FLYING", "PSYCHIC", "BUG", "ROCK", "GHOST", "DRAGON", "DARK", "STEEL", "FAIRY"
+    )
+
+    val teamScores = allTypes.associateWith { 0 }.toMutableMap()
+
+    for (pokemon in team) {
+        for (atkType in allTypes) {
+            var productMultiplier = 1f
+            for (defType in pokemon.types) {
+                productMultiplier *= getSingleTypeMatchup(atkType, defType)
+            }
+            when {
+                productMultiplier > 1f -> teamScores[atkType] = teamScores[atkType]!! - 1
+                productMultiplier < 1f -> teamScores[atkType] = teamScores[atkType]!! + 1
+            }
+        }
+    }
+
+    val weaknesses = teamScores.filterValues { it < 0 }.toList().sortedBy { it.second }
+    val resistances = teamScores.filterValues { it > 0 }.toList().sortedByDescending { it.second }
+
+    return TeamEffectivenessResult(weaknesses, resistances)
+}
+
+fun getSingleTypeMatchup(atk: String, def: String): Float {
+    val a = atk.uppercase()
+    val d = def.uppercase()
+    return when (a) {
+        "NORMAL" -> if (d == "ROCK" || d == "STEEL") 0.5f else if (d == "GHOST") 0f else 1f
+        "FIRE" -> when(d) { "GRASS", "ICE", "BUG", "STEEL" -> 2f; "FIRE", "WATER", "ROCK", "DRAGON" -> 0.5f; else -> 1f }
+        "WATER" -> when(d) { "FIRE", "GROUND", "ROCK" -> 2f; "WATER", "GRASS", "DRAGON" -> 0.5f; else -> 1f }
+        "ELECTRIC" -> when(d) { "WATER", "FLYING" -> 2f; "ELECTRIC", "GRASS", "DRAGON" -> 0.5f; "GROUND" -> 0f; else -> 1f }
+        "GRASS" -> when(d) { "WATER", "GROUND", "ROCK" -> 2f; "FIRE", "GRASS", "POISON", "FLYING", "BUG", "DRAGON", "STEEL" -> 0.5f; else -> 1f }
+        "ICE" -> when(d) { "GRASS", "GROUND", "FLYING", "DRAGON" -> 2f; "FIRE", "WATER", "ICE", "STEEL" -> 0.5f; else -> 1f }
+        "FIGHTING" -> when(d) { "NORMAL", "ICE", "ROCK", "DARK", "STEEL" -> 2f; "POISON", "FLYING", "PSYCHIC", "BUG", "FAIRY" -> 0.5f; "GHOST" -> 0f; else -> 1f }
+        "POISON" -> when(d) { "GRASS", "FAIRY" -> 2f; "POISON", "GROUND", "ROCK", "GHOST" -> 0.5f; "STEEL" -> 0f; else -> 1f }
+        "GROUND" -> when(d) { "FIRE", "ELECTRIC", "POISON", "ROCK", "STEEL" -> 2f; "GRASS", "BUG" -> 0.5f; "FLYING" -> 0f; else -> 1f }
+        "FLYING" -> when(d) { "GRASS", "FIGHTING", "BUG" -> 2f; "ELECTRIC", "ROCK", "STEEL" -> 0.5f; else -> 1f }
+        "PSYCHIC" -> when(d) { "FIGHTING", "POISON" -> 2f; "PSYCHIC", "STEEL" -> 0.5f; "DARK" -> 0f; else -> 1f }
+        "BUG" -> when(d) { "GRASS", "PSYCHIC", "DARK" -> 2f; "FIRE", "FIGHTING", "POISON", "FLYING", "GHOST", "STEEL", "FAIRY" -> 0.5f; else -> 1f }
+        "ROCK" -> when(d) { "FIRE", "ICE", "FLYING", "BUG" -> 2f; "FIGHTING", "GROUND", "STEEL" -> 0.5f; else -> 1f }
+        "GHOST" -> when(d) { "PSYCHIC", "GHOST" -> 2f; "DARK" -> 0.5f; "NORMAL" -> 0f; else -> 1f }
+        "DRAGON" -> when(d) { "DRAGON" -> 2f; "STEEL" -> 0.5f; "FAIRY" -> 0f; else -> 1f }
+        "DARK" -> when(d) { "PSYCHIC", "GHOST" -> 2f; "FIGHTING", "DARK", "FAIRY" -> 0.5f; else -> 1f }
+        "STEEL" -> when(d) { "ICE", "ROCK", "FAIRY" -> 2f; "FIRE", "WATER", "ELECTRIC", "STEEL" -> 0.5f; else -> 1f }
+        "FAIRY" -> when(d) { "FIGHTING", "DRAGON", "DARK" -> 2f; "FIRE", "POISON", "STEEL" -> 0.5f; else -> 1f }
+        else -> 1f
+    }
+}
+
+@Composable
+fun EffectivenessChip(typeName: String, displayScore: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(6.dp))
+            .background(color),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(typeName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
+        Box(
+            modifier = Modifier
+                .background(Color.Black.copy(alpha = 0.15f))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(displayScore, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+fun calcMinHp(base: Int) = base * 2 + 110
+fun calcMaxHp(base: Int) = base * 2 + 204
+
+fun calcMinStat(base: Int) = ((base * 2 + 5) * 0.9).toInt()
+fun calcMaxStat(base: Int) = ((base * 2 + 99) * 1.1).toInt()
 
 @Composable
 fun StatRow(name: String, value: Int, color: Color, min: Int, max: Int) {
@@ -303,19 +465,3 @@ fun StatRow(name: String, value: Int, color: Color, min: Int, max: Int) {
         Text(max.toString(), modifier = Modifier.width(40.dp), fontSize = 14.sp)
     }
 }
-
-@Composable
-fun EffectivenessChip(typeName: String, multiplier: String, bgColor: Color, badgeColor: Color) {
-    Row(modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(bgColor), verticalAlignment = Alignment.CenterVertically) {
-        Text(typeName, color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp))
-        Text(multiplier, color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.background(badgeColor).padding(horizontal = 8.dp, vertical = 6.dp))
-    }
-}
-
-// --- CÔNG THỨC LEVEL 100 CHUẨN CỦA POKÉMON ---
-fun calcMinHp(base: Int) = base * 2 + 110
-fun calcMaxHp(base: Int) = base * 2 + 204
-
-// Chỉ số khác bị ảnh hưởng bởi Nature (Tăng 10% hoặc giảm 10%)
-fun calcMinStat(base: Int) = ((base * 2 + 5) * 0.9).toInt()
-fun calcMaxStat(base: Int) = ((base * 2 + 99) * 1.1).toInt()

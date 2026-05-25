@@ -1,10 +1,10 @@
 package com.example.pokedex.viewmodel
 
-import android.app.Application // Thêm Import Application
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel // Đổi từ ViewModel sang AndroidViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pokedex.data.local.PokemonDatabase
 import com.example.pokedex.data.local.PokemonStateEntity
@@ -40,6 +40,12 @@ class PokemonViewModel(application: Application) : AndroidViewModel(application)
     // --- HOME SCREEN LOGIC ---
     var uiState: PokemonUiState by mutableStateOf(PokemonUiState.Loading)
         private set
+
+    // ==========================================
+    // BỘ NHỚ CHO TEAM BUILDER (GIỮ ĐỘI HÌNH KHÔNG BỊ MẤT KHI CHUYỂN TRANG)
+    // ==========================================
+    var teamName by mutableStateOf("")
+    var selectedTeam by mutableStateOf(listOf<PokemonUiModel>())
 
     // ==========================================
     // QUẢN LÝ TRẠNG THÁI FAVORITE & CAUGHT TỪ DATABASE
@@ -254,5 +260,26 @@ class PokemonViewModel(application: Application) : AndroidViewModel(application)
         )
 
         chainLink.evolves_to.forEach { nextStage -> parseEvoChainRecursive(nextStage, items) }
+    }
+
+    fun saveTeam(teamName: String, team: List<PokemonUiModel>) {
+        // Chuyển danh sách Pokémon thành chuỗi ID để lưu cho nhẹ
+        // Ví dụ: Đội hình có Pikachu (25), Charizard (6) -> Chuỗi sẽ là "25,6"
+        val commaSeparatedIds = team.joinToString(separator = ",") { it.id.toString() }
+
+        val teamEntity = com.example.pokedex.data.local.TeamEntity(
+            teamName = teamName,
+            pokemonIds = commaSeparatedIds
+        )
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Đẩy vào Room Database
+                dao.saveTeam(teamEntity)
+            } catch (e: Exception) {
+                // Xử lý log lỗi nếu có
+                e.printStackTrace()
+            }
+        }
     }
 }

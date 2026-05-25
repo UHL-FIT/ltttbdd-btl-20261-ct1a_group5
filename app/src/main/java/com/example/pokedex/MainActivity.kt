@@ -15,7 +15,7 @@ import com.example.pokedex.ui.screens.PokemonDetailScreen
 import com.example.pokedex.ui.screens.ItemDexScreen
 import com.example.pokedex.ui.screens.LocationDexScreen
 import com.example.pokedex.ui.screens.MoveDexScreen
-
+import com.example.pokedex.ui.screens.TypeDexScreen
 import com.example.pokedex.ui.screens.AbilityDexScreen
 import com.example.pokedex.ui.screens.NatureDexScreen
 import com.example.pokedex.viewmodel.PokemonViewModel
@@ -102,6 +102,11 @@ class MainActivity : ComponentActivity() {
                                     onOpenMenu = { scope.launch { drawerState.open() } }
                                 )
                         }
+                            "types" -> {
+                                TypeDexScreen(
+                                    onOpenMenu = { scope.launch { drawerState.open() } }
+                                )
+                            }
                             else -> {
                                 HomeScreen(
                                     onOpenMenu = { scope.launch { drawerState.open() } },
