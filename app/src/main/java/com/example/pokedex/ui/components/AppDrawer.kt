@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -22,13 +23,16 @@ import androidx.compose.ui.unit.sp
 fun AppDrawer(
     currentRoute: String = "pokedex",
     closeDrawer: () -> Unit,
-    onNavigate: (String) -> Unit
+    onNavigate: (String) -> Unit,
+    isLoggedIn: Boolean = false,
+    userEmail: String? = null,
+    onSignInClick: () -> Unit = {},
+    onProfileClick: () -> Unit = {}
 ) {
     ModalDrawerSheet(
         drawerContainerColor = Color.White,
         modifier = Modifier.width(300.dp)
     ) {
-        // 1. PHẦN HEADER (Giữ nguyên phong cách PokéDex của bạn)
         Column(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
@@ -44,7 +48,6 @@ fun AppDrawer(
                 )
             }
 
-            // Khung thông tin Trainer (Xanh đậm)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -59,24 +62,78 @@ fun AppDrawer(
                         .background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = Color.White)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = Color.White
+                    )
                 }
+
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text("Welcome, trainer", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                    Spacer(modifier = Modifier.height(4.dp))
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = if (isLoggedIn) {
+                            userEmail ?: "Signed in trainer"
+                        } else {
+                            "Welcome, trainer"
+                        },
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     Row {
                         OutlinedButton(
-                            onClick = { },
+                            onClick = {
+                                onProfileClick()
+                            },
                             modifier = Modifier.height(28.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) { Text("PROFILE", fontSize = 10.sp, color = Color.White) }
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text(
+                                text = "PROFILE",
+                                fontSize = 10.sp,
+                                color = Color.White
+                            )
+                        }
+
                         Spacer(modifier = Modifier.width(8.dp))
-                        OutlinedButton(
-                            onClick = { },
-                            modifier = Modifier.height(28.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) { Text("SIGN IN", fontSize = 10.sp, color = Color.White) }
+
+                        if (!isLoggedIn) {
+                            OutlinedButton(
+                                onClick = {
+                                    onSignInClick()
+                                },
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color.White
+                                )
+                            ) {
+                                Text(
+                                    text = "SIGN IN",
+                                    fontSize = 10.sp,
+                                    color = Color.White
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = "SIGNED IN",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 10.sp,
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            )
+                        }
                     }
                 }
             }
@@ -84,83 +141,112 @@ fun AppDrawer(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 2. DANH SÁCH MENU (Bọc trong verticalScroll đề phòng màn hình nhỏ)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Nhóm 1: Các loại từ điển bách khoa (Dex)
             DrawerMenuItem(
-                icon = Icons.Default.CatchingPokemon, // Icon quả cầu Pokéball trong thư viện mở rộng
+                icon = Icons.Default.CatchingPokemon,
                 label = "Pokédex",
                 isSelected = currentRoute == "pokedex",
-                onClick = { onNavigate("pokedex"); closeDrawer() }
+                onClick = {
+                    onNavigate("pokedex")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.FlashOn, // Thay cho biểu tượng tia sét/kiếm của Move Dex
+                icon = Icons.Default.FlashOn,
                 label = "Move Dex",
                 isSelected = currentRoute == "moves",
-                onClick = { onNavigate("moves"); closeDrawer() }
+                onClick = {
+                    onNavigate("moves")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.AutoAwesome, // Biểu tượng lấp lánh cho Ability Dex
+                icon = Icons.Default.AutoAwesome,
                 label = "Ability Dex",
                 isSelected = currentRoute == "abilities",
-                onClick = { onNavigate("abilities"); closeDrawer() }
+                onClick = {
+                    onNavigate("abilities")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.Backpack, // Biểu tượng túi đồ cho Item Dex
+                icon = Icons.Default.Backpack,
                 label = "Item Dex",
                 isSelected = currentRoute == "items",
-                onClick = { onNavigate("items"); closeDrawer() }
+                onClick = {
+                    onNavigate("items")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.LocationOn, // Biểu tượng ghim bản đồ cho Location Dex
+                icon = Icons.Default.LocationOn,
                 label = "Location Dex",
                 isSelected = currentRoute == "locations",
-                onClick = { onNavigate("locations"); closeDrawer() }
+                onClick = {
+                    onNavigate("locations")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.Label, // Biểu tượng thẻ tag cho Type Dex
+                icon = Icons.Default.Label,
                 label = "Type Dex",
                 isSelected = currentRoute == "types",
-                onClick = { onNavigate("types"); closeDrawer() }
+                onClick = {
+                    onNavigate("types")
+                    closeDrawer()
+                }
             )
+
             DrawerMenuItem(
-                icon = Icons.Default.Eco, // Biểu tượng chiếc lá thiên nhiên cho Nature Dex
+                icon = Icons.Default.Eco,
                 label = "Nature Dex",
                 isSelected = currentRoute == "natures",
-                onClick = { onNavigate("natures"); closeDrawer() }
+                onClick = {
+                    onNavigate("natures")
+                    closeDrawer()
+                }
             )
 
-            // Dấu gạch ngang phân tách nhóm như bản gốc
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp), thickness = 1.dp, color = Color.LightGray)
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                thickness = 1.dp,
+                color = Color.LightGray
+            )
 
-            // Nhóm 2: Tính năng xây dựng đội hình
             DrawerMenuItem(
-                icon = Icons.Default.Groups, // Biểu tượng nhóm người cho Team Builder
+                icon = Icons.Default.Groups,
                 label = "Team Builder",
                 isSelected = currentRoute == "team",
-                onClick = { onNavigate("team"); closeDrawer() }
+                onClick = {
+                    onNavigate("team")
+                    closeDrawer()
+                }
             )
 
-            // Dấu gạch ngang phân tách nhóm
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp), thickness = 1.dp, color = Color.LightGray)
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
+                thickness = 1.dp,
+                color = Color.LightGray
+            )
 
-            // Nhóm 3: Hệ thống và Hỗ trợ
             DrawerMenuItem(
                 icon = Icons.Default.Settings,
                 label = "Settings",
                 isSelected = currentRoute == "settings",
-                onClick = { onNavigate("settings"); closeDrawer() }
-            )
-            DrawerMenuItem(
-                icon = Icons.Default.Email, // Biểu tượng hòm thư cho Help & Feedback
-                label = "Help & Feedback",
-                isSelected = currentRoute == "help",
-                onClick = { onNavigate("help"); closeDrawer() }
+                onClick = {
+                    onNavigate("settings")
+                    closeDrawer()
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -178,12 +264,25 @@ fun DrawerMenuItem(
     val tintColor = if (isSelected) Color(0xFFE3350D) else Color(0xFF334F6A)
 
     NavigationDrawerItem(
-        label = { Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = tintColor) },
-        icon = { Icon(imageVector = icon, contentDescription = label, tint = tintColor) },
+        label = {
+            Text(
+                text = label,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = tintColor
+            )
+        },
+        icon = {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = tintColor
+            )
+        },
         selected = isSelected,
         onClick = onClick,
         colors = NavigationDrawerItemDefaults.colors(
-            selectedContainerColor = Color(0xFFF5F5F5), // Tạo màu nền xám nhẹ khi mục đó được chọn
+            selectedContainerColor = Color(0xFFF5F5F5),
             unselectedContainerColor = Color.Transparent
         ),
         modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)

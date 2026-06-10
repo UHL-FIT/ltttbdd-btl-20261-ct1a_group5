@@ -1,7 +1,9 @@
 plugins {
     alias(libs.plugins.android.application)
+
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.devtools.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -44,41 +46,45 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    // 1. Navigation Compose
+
+    // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.9.8")
 
-    // 2. Retrofit & Gson (Xử lý API)
+    // Retrofit & Gson
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
     implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
 
-    // 3. Coil (Load ảnh Pixel/Sprite của Pokemon)
+    // Coil
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // 4. Room Database (Lưu Dream Team)
-    val roomVersion = "2.6.1"
+    // Room Database
+    val roomVersion = "2.8.4"
     implementation("androidx.room:room-runtime:$roomVersion")
     implementation("androidx.room:room-ktx:$roomVersion")
     ksp("androidx.room:room-compiler:$roomVersion")
-    implementation("androidx.compose.material:material-icons-extended")
-    // 5. ViewModel Compose
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    // Retrofit (Dùng để gọi PokéAPI lấy dữ liệu mạng)
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    // Gson Converter (Dùng để dịch dữ liệu JSON từ mạng thành Data class của Kotlin)
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    // Coil (Dùng để tự động tải và hiển thị ảnh từ link URL trong Jetpack Compose)
-    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-auth")
 }
