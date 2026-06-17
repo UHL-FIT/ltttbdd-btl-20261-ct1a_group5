@@ -125,7 +125,7 @@ fun PokemonCard(
                     .fillMaxHeight(),
                 contentAlignment = Alignment.BottomEnd
             ) {
-                // --- 2. SỬA CHÍNH: Tối ưu Coil để ảnh nạp mượt hơn ---
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(imageUrl)
@@ -133,7 +133,7 @@ fun PokemonCard(
                         .build(),
                     contentDescription = name,
                     modifier = Modifier
-                        .size(120.dp) // --- 3. SỬA CHÍNH: Ép size ảnh cố định, không sợ tràn ---
+                        .size(120.dp) //
                         .offset(x = 8.dp, y = 8.dp),
                     contentScale = ContentScale.Fit
                 )

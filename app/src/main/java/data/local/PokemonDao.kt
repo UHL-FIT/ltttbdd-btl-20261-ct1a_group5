@@ -11,7 +11,7 @@ interface PokemonDao {
 
     // --- QUẢN LÝ TRẠNG THÁI FAVORITE / CAUGHT ---
 
-    // ĐÃ THÊM LẠI "suspend"
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun savePokemonMark(state: PokemonStateEntity)
 
@@ -22,14 +22,14 @@ interface PokemonDao {
     @Query("SELECT id FROM pokemon_state WHERE isCaught = 1")
     fun getCaughtIds(): Flow<List<Int>>
 
-    // ĐÃ THÊM LẠI "suspend"
+
     @Query("SELECT * FROM pokemon_state WHERE id = :id")
     suspend fun checkPokemonMark(id: Int): PokemonStateEntity?
 
-    // --- MỚI THÊM: QUẢN LÝ ĐỘI HÌNH TEAM BUILDER ---
 
-    // Lưu thông tin Team (Để demo đơn giản, chúng ta lưu tạm id của 6 pokemon thành chuỗi "1,4,7...")
-    // Nếu bạn có Entity riêng cho Team thì đổi lại Type nhé.
+
+
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveTeam(team: TeamEntity)
 }
